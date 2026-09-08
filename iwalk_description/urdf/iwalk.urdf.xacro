@@ -1,0 +1,408 @@
+<?xml version="1.0"?>
+
+<robot
+  xmlns:xacro="http://www.ros.org/wiki/xacro"
+  name="iwalk">
+
+  <!-- ==================================================== -->
+  <!-- ΒΑΣΙΚΕΣ ΠΑΡΑΜΕΤΡΟΙ                                  -->
+
+  <!-- ==================================================== -->
+
+  <xacro:property name="PI" value="3.141592653589793"/>
+
+  <!-- Σταθερό ύψος του base_link από το έδαφος -->
+  <xacro:property name="base_link_height" value="0.095"/>
+  <!-- 0.001 αν το STL είναι σε mm, 1.0 αν είναι σε m -->
+
+  <xacro:property name="mesh_scale" value="0.001"/>
+
+  <!-- Μετατόπιση και περιστροφή του STL ως προς base_link -->
+  <xacro:property name="mesh_x" value="0.682367371"/>
+  <xacro:property name="mesh_y" value="-0.326500000"/>
+  <xacro:property name="mesh_z" value="-0.095114396"/>
+
+  <xacro:property name="mesh_roll"  value="0.0"/>
+  <xacro:property name="mesh_pitch" value="0.0"/>
+  <xacro:property name="mesh_yaw"   value="${PI/2.0}"/>
+
+  <xacro:property name="body_length" value="0.784734741"/>
+  <xacro:property name="body_width"  value="0.653000000"/>
+  <xacro:property name="body_height" value="1.046494491"/>
+
+  <xacro:property name="body_center_x" value="0.39"/>
+  <xacro:property name="body_center_y" value="0.0"/>
+  <xacro:property name="body_center_z" value="0.428247245"/>
+    <!-- Προσωρινές δυναμικές παράμετροι -->
+  <xacro:property name="body_mass" value="25.0"/>
+
+  <!-- Πίσω κινητήριοι τροχοί -->
+  <xacro:property name="rear_wheel_radius" value="0.095"/>
+  <xacro:property name="rear_wheel_width"  value="0.04"/>
+  <xacro:property name="rear_wheel_mass"   value="0.80"/>
+
+  <xacro:property name="rear_wheel_separation" value="0.61"/>
+  <xacro:property name="rear_wheel_x" value="0.0"/>
+  <xacro:property name="rear_wheel_z" value="0.0"/>
+
+  <!-- Εμπρός caster τροχοί -->
+  <xacro:property name="front_wheel_radius" value="0.060"/>
+  <xacro:property name="front_wheel_width"  value="0.030"/>
+  <xacro:property name="front_wheel_mass"   value="0.30"/>
+
+  <xacro:property name="front_caster_x" value="0.63"/>
+  <xacro:property name="front_caster_separation" value="0.38"/>
+  <xacro:property name="front_wheel_z" value="-0.035"/>
+
+  <xacro:property name="caster_trail" value="0.03"/>
+  <!-- ==================================================== -->
+  <!-- MATERIALS                                            -->
+  <!-- ==================================================== -->
+
+  <material name="iwalk_gray">
+    <color rgba="0.35 0.35 0.38 0.95"/>
+  </material>
+
+  <!-- Ανοιχτό ροζ -->
+  <material name="front_left_pink">
+    <color rgba="1.00 0.55 0.72 1.0"/>
+  </material>
+
+  <!-- Έντονο hot pink -->
+  <material name="front_right_pink">
+    <color rgba="1.00 0.05 0.45 1.0"/>
+  </material>
+
+  <!-- Magenta -->
+  <material name="rear_left_pink">
+    <color rgba="0.72 0.02 0.55 1.0"/>
+  </material>
+
+  <!-- Σκούρο plum pink -->
+  <material name="rear_right_pink">
+    <color rgba="0.38 0.03 0.27 1.0"/>
+  </material>
+  <!-- ==================================================== -->
+  <!-- INERTIAL MACROS                                      -->
+  <!-- ==================================================== -->
+
+  <!-- Inertia ορθογώνιου παραλληλεπιπέδου -->
+  <xacro:macro
+    name="box_inertial"
+    params="mass x y z origin_x origin_y origin_z">
+
+    <inertial>
+      <origin
+        xyz="${origin_x} ${origin_y} ${origin_z}"
+        rpy="0 0 0"/>
+
+      <mass value="${mass}"/>
+
+      <inertia
+        ixx="${mass * (y*y + z*z) / 12.0}"
+        ixy="0.0"
+        ixz="0.0"
+        iyy="${mass * (x*x + z*z) / 12.0}"
+        iyz="0.0"
+        izz="${mass * (x*x + y*y) / 12.0}"/>
+    </inertial>
+
+  </xacro:macro>
+
+  <!-- Inertia συμπαγούς κυλινδρικού τροχού με άξονα y -->
+  <xacro:macro
+    name="wheel_inertial"
+    params="mass radius width">
+
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+
+      <mass value="${mass}"/>
+
+      <inertia
+        ixx="${mass * (3.0*radius*radius + width*width) / 12.0}"
+        ixy="0.0"
+        ixz="0.0"
+        iyy="${mass * radius*radius / 2.0}"
+        iyz="0.0"
+        izz="${mass * (3.0*radius*radius + width*width) / 12.0}"/>
+    </inertial>
+
+  </xacro:macro>
+
+  <!-- ==================================================== -->
+  <!-- BASE FOOTPRINT                                       -->
+  <!-- Σημείο στο έδαφος κάτω από τον πίσω άξονα            -->
+  <!-- ==================================================== -->
+
+  <link name="base_footprint"/>
+
+  <!-- ==================================================== -->
+  <!-- BASE LINK                                            -->
+  <!-- Βρίσκεται στο μέσο του πίσω άξονα, στο ύψος          -->
+  <!-- των κέντρων των τροχών                               -->
+  <!-- ==================================================== -->
+
+  <link name="base_link">
+
+    <!-- Πραγματική οπτική γεωμετρία του i-Walk -->
+    <visual name="iwalk_body_visual">
+
+      <origin
+        xyz="${mesh_x} ${mesh_y} ${mesh_z}"
+        rpy="${mesh_roll} ${mesh_pitch} ${mesh_yaw}"/>
+
+      <geometry>
+        <mesh
+          filename="package://iwalk_description/meshes/iwalk_body.STL"
+          scale="${mesh_scale} ${mesh_scale} ${mesh_scale}"/>
+      </geometry>
+
+      <material name="iwalk_gray"/>
+
+    </visual>
+
+    <!--
+      Για collision χρησιμοποιούμε απλή γεωμετρία.
+      Αργότερα μπορεί να αντικατασταθεί από περισσότερα boxes
+      ή από simplified collision mesh.
+    -->
+    <collision name="iwalk_body_collision">
+
+      <origin
+        xyz="${body_center_x}
+             ${body_center_y}
+             ${body_center_z}"
+        rpy="0 0 0"/>
+
+      <geometry>
+        <box
+          size="${body_length}
+                ${body_width}
+                ${body_height}"/>
+      </geometry>
+
+    </collision>
+
+    <xacro:box_inertial
+      mass="${body_mass}"
+      x="${body_length}"
+      y="${body_width}"
+      z="${body_height}"
+      origin_x="${body_center_x}"
+      origin_y="${body_center_y}"
+      origin_z="${body_center_z}"/>
+
+  </link>
+
+  <!-- base_footprint βρίσκεται στο έδαφος -->
+  <joint name="base_footprint_joint" type="fixed">
+
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+
+    <origin
+      xyz="-0.39 0 ${base_link_height}"
+      rpy="0 0 0"/>
+
+  </joint>
+
+  <!-- ==================================================== -->
+  <!-- REAR DRIVEN WHEELS                                   -->
+  <!-- Δομή αντίστοιχη με differential-drive robot          -->
+  <!-- ==================================================== -->
+
+  <xacro:macro
+    name="rear_wheel"
+    params="side y_position material_name">
+
+    <link name="${side}_rear_wheel_link">
+
+      <visual name="${side}_rear_wheel_visual">
+
+        <!--
+          Ο cylinder έχει αρχικά axis z.
+          Rotation π/2 γύρω από x => wheel axis κατά y.
+        -->
+        <origin xyz="0 0 0" rpy="${PI/2.0} 0 0"/>
+
+        <geometry>
+          <cylinder
+            radius="${rear_wheel_radius}"
+            length="${rear_wheel_width}"/>
+        </geometry>
+
+        <material name="${material_name}"/>
+
+      </visual>
+
+      <collision name="${side}_rear_wheel_collision">
+
+        <origin xyz="0 0 0" rpy="${PI/2.0} 0 0"/>
+
+        <geometry>
+          <cylinder
+            radius="${rear_wheel_radius}"
+            length="${rear_wheel_width}"/>
+        </geometry>
+
+      </collision>
+
+      <xacro:wheel_inertial
+        mass="${rear_wheel_mass}"
+        radius="${rear_wheel_radius}"
+        width="${rear_wheel_width}"/>
+
+    </link>
+
+    <joint
+      name="${side}_rear_wheel_joint"
+      type="continuous">
+
+      <parent link="base_link"/>
+      <child link="${side}_rear_wheel_link"/>
+
+      <origin
+        xyz="${rear_wheel_x} ${y_position} ${rear_wheel_z}"
+        rpy="0 0 0"/>
+
+      <axis xyz="0 1 0"/>
+
+      <limit effort="50.0" velocity="20.0"/>
+
+      <dynamics damping="0.01" friction="0.0"/>
+
+    </joint>
+
+  </xacro:macro>
+
+  <xacro:rear_wheel
+    side="left"
+    y_position="${rear_wheel_separation / 2.0}"
+    material_name="rear_left_pink"/>
+
+  <xacro:rear_wheel
+    side="right"
+    y_position="${-rear_wheel_separation / 2.0}"
+    material_name="rear_right_pink"/>
+
+  <!-- ==================================================== -->
+  <!-- FRONT PASSIVE CASTERS                                -->
+  <!-- Κάθε caster έχει:                                    -->
+  <!-- 1. swivel joint γύρω από z                           -->
+  <!-- 2. wheel joint γύρω από y                            -->
+  <!-- ==================================================== -->
+
+  <xacro:macro
+    name="front_caster"
+    params="side y_position material_name">
+
+    <!-- Περιστρεφόμενη βάση caster -->
+    <link name="${side}_caster_swivel_link">
+
+      <!-- Μικρή θετική μάζα για το μελλοντικό Gazebo -->
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="0.20"/>
+
+        <inertia
+          ixx="0.0002"
+          ixy="0.0"
+          ixz="0.0"
+          iyy="0.0002"
+          iyz="0.0"
+          izz="0.0002"/>
+      </inertial>
+
+    </link>
+
+    <joint
+      name="${side}_caster_swivel_joint"
+      type="continuous">
+
+      <parent link="base_link"/>
+      <child link="${side}_caster_swivel_link"/>
+
+      <origin
+        xyz="${front_caster_x}
+            ${y_position}
+            ${front_wheel_z}"
+        rpy="0 0 0"/>
+
+      <axis xyz="0 0 1"/>
+
+      <limit effort="10.0" velocity="20.0"/>
+
+      <dynamics damping="0.05" friction="0.01"/>
+
+    </joint>
+
+    <!-- Ο πραγματικός εμπρός τροχός -->
+    <link name="${side}_front_wheel_link">
+
+      <visual name="${side}_front_wheel_visual">
+
+        <origin xyz="0 0 0" rpy="${PI/2.0} 0 0"/>
+
+        <geometry>
+          <cylinder
+            radius="${front_wheel_radius}"
+            length="${front_wheel_width}"/>
+        </geometry>
+
+        <material name="${material_name}"/>
+
+      </visual>
+
+      <collision name="${side}_front_wheel_collision">
+
+        <origin xyz="0 0 0" rpy="${PI/2.0} 0 0"/>
+
+        <geometry>
+          <cylinder
+            radius="${front_wheel_radius}"
+            length="${front_wheel_width}"/>
+        </geometry>
+
+      </collision>
+
+      <xacro:wheel_inertial
+        mass="${front_wheel_mass}"
+        radius="${front_wheel_radius}"
+        width="${front_wheel_width}"/>
+
+    </link>
+
+    <joint
+      name="${side}_front_wheel_joint"
+      type="continuous">
+
+      <parent link="${side}_caster_swivel_link"/>
+      <child link="${side}_front_wheel_link"/>
+
+      <!-- Wheel axle λίγο πίσω από το caster swivel axis -->
+      <origin
+        xyz="${-caster_trail} 0 0"
+        rpy="0 0 0"/>
+
+      <axis xyz="0 1 0"/>
+
+      <limit effort="20.0" velocity="20.0"/>
+
+      <dynamics damping="0.01" friction="0.0"/>
+
+    </joint>
+
+  </xacro:macro>
+
+  <xacro:front_caster
+    side="left"
+    y_position="${front_caster_separation / 2.0}"
+    material_name="front_left_pink"/>
+
+  <xacro:front_caster
+    side="right"
+    y_position="${-front_caster_separation / 2.0}"
+    material_name="front_right_pink"/>
+
+</robot>

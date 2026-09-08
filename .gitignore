@@ -1,0 +1,8 @@
+build/
+install/
+log/
+__pycache__/
+*.py[cod]
+
+# Exclude STL meshes
+*.[sS][tT][lL]
