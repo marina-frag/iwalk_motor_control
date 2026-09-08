@@ -1,0 +1,10 @@
+<library path="iwalk_hardware">
+  <class
+    name="iwalk_hardware/VescSystem"
+    type="iwalk_hardware::VescSystem"
+    base_class_type="hardware_interface::SystemInterface">
+    <description>
+      Two-wheel VESC hardware interface using native CAN status and SET_RPM.
+    </description>
+  </class>
+</library>
