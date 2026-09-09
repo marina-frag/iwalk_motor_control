@@ -1,22 +1,21 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
-<exec_depend>xacro</exec_depend>
-<exec_depend>robot_state_publisher</exec_depend>
-<exec_depend>controller_manager</exec_depend>
-<exec_depend>diff_drive_controller</exec_depend>
-<exec_depend>joint_state_broadcaster</exec_depend>
-<exec_depend>iwalk_description</exec_depend>
-<exec_depend>iwalk_hardware</exec_depend>
-<exec_depend>iwalk_sim_motor</exec_depend>
-<exec_depend>iwalk_fake_encoder</exec_depend>
-<exec_depend>iwalk_fake_vesc</exec_depend>
 <package format="3">
   <name>iwalk_bringup</name>
   <version>0.0.0</version>
   <description>TODO: Package description</description>
   <maintainer email="marina.frag3@gmail.com">marina-fragkouli</maintainer>
   <license>TODO: License declaration</license>
-
+  <exec_depend>xacro</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>controller_manager</exec_depend>
+  <exec_depend>diff_drive_controller</exec_depend>
+  <exec_depend>joint_state_broadcaster</exec_depend>
+  <exec_depend>iwalk_description</exec_depend>
+  <exec_depend>iwalk_hardware</exec_depend>
+  <exec_depend>iwalk_sim_motor</exec_depend>
+  <exec_depend>iwalk_fake_encoder</exec_depend>
+  <exec_depend>iwalk_fake_vesc</exec_depend>
   <depend>rclpy</depend>
   <depend>geometry_msgs</depend>
   <depend>launch</depend>
