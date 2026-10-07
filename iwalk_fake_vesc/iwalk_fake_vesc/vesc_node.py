@@ -178,6 +178,7 @@ class FakeVesc(Node):
         self.torque_pub.publish(Float64(data=torque))
         self.speed_pub.publish(Float64(data=self.velocity))
         self.target_pub.publish(Float64(data=self.target))
+
     def publish_can_status(self):
         now = time.monotonic()
 
@@ -226,6 +227,7 @@ class FakeVesc(Node):
                 f'CAN status transmission failed: {exc}',
                 throttle_duration_sec=2.0,
             )
+
     def close(self):
         self.bus.shutdown()
 

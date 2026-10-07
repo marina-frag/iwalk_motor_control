@@ -24,6 +24,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'bridge_heartbeat_node = iwalk_fake_vesc.bridge_heartbeat_node:main',
             'vesc_node = iwalk_fake_vesc.vesc_node:main',
         ],
     },

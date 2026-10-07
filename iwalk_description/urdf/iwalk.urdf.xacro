@@ -11,8 +11,33 @@
 
   <xacro:property name="PI" value="3.141592653589793"/>
 
+  <!-- ros2_control configuration. These values become hardware_info parameters
+       in the generated URDF; the plugin never parses this Xacro itself. -->
+  <xacro:arg name="can_interface" default="vcan0"/>
+  <xacro:arg name="single_motor" default="true"/>
+  <xacro:arg name="monitor_only" default="false"/>
+  <xacro:arg name="feedback_timeout" default="0.2"/>
+  <xacro:arg name="motor_pole_pairs" default="15"/>
+  <xacro:arg name="motor_gear_ratio" default="1.0"/>
+  <xacro:arg name="motor_max_erpm" default="7500"/>
+  <xacro:arg name="left_vesc_id" default="1"/>
+  <xacro:arg name="right_vesc_id" default="2"/>
+  <xacro:arg name="left_direction" default="1"/>
+  <xacro:arg name="right_direction" default="1"/>
+  <xacro:arg name="left_encoder_sensor" default="hall"/>
+  <xacro:arg name="right_encoder_sensor" default="hall"/>
+  <xacro:arg name="left_feedback_source" default="vesc_status"/>
+  <xacro:arg name="right_feedback_source" default="vesc_status"/>
+
+  <xacro:property name="motor_pole_pairs" value="$(arg motor_pole_pairs)"/>
+  <xacro:property name="motor_gear_ratio" value="$(arg motor_gear_ratio)"/>
+  <xacro:property name="motor_max_erpm" value="$(arg motor_max_erpm)"/>
+  <!-- URDF wheel speed ceiling is derived from the sole hardware speed limit. -->
+  <xacro:property name="motor_max_wheel_rad_s"
+                  value="${motor_max_erpm * 2.0 * PI / (60.0 * motor_pole_pairs * motor_gear_ratio)}"/>
+
   <!-- Σταθερό ύψος του base_link από το έδαφος -->
-  <xacro:property name="base_link_height" value="0.095"/>
+  <xacro:property name="base_link_height" value="0.10"/>
   <!-- 0.001 αν το STL είναι σε mm, 1.0 αν είναι σε m -->
 
   <xacro:property name="mesh_scale" value="0.001"/>
@@ -37,13 +62,13 @@
   <xacro:property name="body_mass" value="25.0"/>
 
   <!-- Πίσω κινητήριοι τροχοί -->
-  <xacro:property name="rear_wheel_radius" value="0.095"/>
-  <xacro:property name="rear_wheel_width"  value="0.04"/>
-  <xacro:property name="rear_wheel_mass"   value="0.80"/>
+  <xacro:property name="rear_wheel_radius" value="0.10"/>
+  <xacro:property name="rear_wheel_width"  value="0.059"/>
+  <xacro:property name="rear_wheel_mass"   value="3.5"/>
 
   <xacro:property name="rear_wheel_separation" value="0.61"/>
   <xacro:property name="rear_wheel_x" value="0.0"/>
-  <xacro:property name="rear_wheel_z" value="0.0"/>
+  <xacro:property name="rear_wheel_z" value="-0.040"/>
 
   <!-- Εμπρός caster τροχοί -->
   <xacro:property name="front_wheel_radius" value="0.060"/>
@@ -268,7 +293,7 @@
 
       <axis xyz="0 1 0"/>
 
-      <limit effort="50.0" velocity="20.0"/>
+      <limit effort="50.0" velocity="${motor_max_wheel_rad_s}"/>
 
       <dynamics damping="0.01" friction="0.0"/>
 
@@ -405,4 +430,49 @@
     y_position="${-front_caster_separation / 2.0}"
     material_name="front_right_pink"/>
 
+<!-- Κοινή δήλωση ενός κινητήριου joint -->
+<xacro:macro name="vesc_joint"
+             params="joint_name vesc_id direction encoder_sensor feedback_source">
+  <joint name="${joint_name}">
+    <command_interface name="velocity"/>
+    <state_interface name="position"/>
+    <state_interface name="velocity"/>
+
+    <param name="vesc_id">${vesc_id}</param>
+    <param name="pole_pairs">${motor_pole_pairs}</param>
+    <param name="gear_ratio">${motor_gear_ratio}</param>
+    <param name="direction">${direction}</param>
+    <param name="max_erpm">${motor_max_erpm}</param>
+
+    <param name="encoder_sensor">${encoder_sensor}</param>
+    <param name="feedback_source">${feedback_source}</param>
+  </joint>
+</xacro:macro>
+
+<ros2_control name="IWalkVescSystem" type="system">
+  <hardware>
+    <plugin>iwalk_hardware/VescSystem</plugin>
+
+    <param name="can_interface">$(arg can_interface)</param>
+    <param name="feedback_timeout">$(arg feedback_timeout)</param>
+    <param name="monitor_only">$(arg monitor_only)</param>
+  </hardware>
+
+  <xacro:vesc_joint
+    joint_name="left_rear_wheel_joint"
+    vesc_id="$(arg left_vesc_id)"
+    direction="$(arg left_direction)"
+    encoder_sensor="$(arg left_encoder_sensor)"
+    feedback_source="$(arg left_feedback_source)"/>
+
+  <!-- Στο τεστ ενός κινητήρα παραλείπεται ο δεξιός -->
+  <xacro:unless value="$(arg single_motor)">
+    <xacro:vesc_joint
+      joint_name="right_rear_wheel_joint"
+      vesc_id="$(arg right_vesc_id)"
+      direction="$(arg right_direction)"
+      encoder_sensor="$(arg right_encoder_sensor)"
+      feedback_source="$(arg right_feedback_source)"/>
+  </xacro:unless>
+</ros2_control>
 </robot>

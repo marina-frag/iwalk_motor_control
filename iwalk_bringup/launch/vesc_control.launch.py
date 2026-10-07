@@ -18,72 +18,38 @@ def _as_bool(value, name):
 
 
 def _setup(context):
-    share = Path(get_package_share_directory('iwalk_bringup'))
+    bringup_share = Path(get_package_share_directory('iwalk_bringup'))
     description_share = Path(
         get_package_share_directory('iwalk_description'))
     single_motor_text = LaunchConfiguration('single_motor').perform(context)
     single_motor = _as_bool(single_motor_text, 'single_motor')
-    monitor_only = LaunchConfiguration('monitor_only').perform(context)
-    can_interface = LaunchConfiguration('can_interface').perform(context)
+    mappings = {
+        name: LaunchConfiguration(name).perform(context)
+        for name in (
+            'can_interface',
+            'single_motor',
+            'monitor_only',
+            'feedback_timeout',
+            'left_vesc_id',
+            'right_vesc_id',
+            'left_direction',
+            'right_direction',
+        )
+    }
     robot_xml = xacro.process_file(
         str(description_share / 'urdf' / 'iwalk.urdf.xacro'),
-        mappings={
-            'single_motor': single_motor_text,
-            'monitor_only': monitor_only,
-            'can_interface': can_interface,
-        },
+        mappings=mappings,
     ).toxml()
     config_name = (
         'controllers_single.yaml' if single_motor
         else 'controllers_diff.yaml'
     )
-    config = str(share / 'config' / config_name)
+    config = str(bringup_share / 'config' / config_name)
     controller = (
         'test_velocity_controller' if single_motor
         else 'diff_drive_controller'
     )
-
-    actions = [
-        Node(
-            package='iwalk_fake_vesc',
-            executable='bridge_heartbeat_node',
-            parameters=[{'can_interface': can_interface}],
-            output='screen',
-        ),
-    ]
-    motor_ids = (1,) if single_motor else (1, 2)
-    for motor_id in motor_ids:
-        namespace = f'motor{motor_id}'
-        actions.extend([
-            Node(
-                package='iwalk_sim_motor',
-                executable='motor_node',
-                namespace=namespace,
-                output='screen',
-            ),
-            Node(
-                package='iwalk_fake_encoder',
-                executable='encoder_node',
-                namespace=namespace,
-                parameters=[{'counts_per_revolution': 4096}],
-                output='screen',
-            ),
-            Node(
-                package='iwalk_fake_vesc',
-                executable='vesc_node',
-                namespace=namespace,
-                parameters=[{
-                    'can_interface': can_interface,
-                    'vesc_id': motor_id,
-                    'pole_pairs': 15,
-                    'counts_per_revolution': 4096,
-                    'max_erpm': 7500.0,
-                }],
-                output='screen',
-            ),
-        ])
-
-    actions.extend([
+    return [
         Node(
             package='robot_state_publisher',
             executable='robot_state_publisher',
@@ -118,14 +84,18 @@ def _setup(context):
             ],
             output='screen',
         ),
-    ])
-    return actions
+    ]
 
 
 def generate_launch_description():
     return LaunchDescription([
+        DeclareLaunchArgument('can_interface', default_value='vcan0'),
         DeclareLaunchArgument('single_motor', default_value='true'),
         DeclareLaunchArgument('monitor_only', default_value='false'),
-        DeclareLaunchArgument('can_interface', default_value='vcan0'),
+        DeclareLaunchArgument('feedback_timeout', default_value='0.2'),
+        DeclareLaunchArgument('left_vesc_id', default_value='1'),
+        DeclareLaunchArgument('right_vesc_id', default_value='2'),
+        DeclareLaunchArgument('left_direction', default_value='1'),
+        DeclareLaunchArgument('right_direction', default_value='1'),
         OpaqueFunction(function=_setup),
     ])

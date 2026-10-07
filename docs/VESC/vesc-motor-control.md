@@ -1,6 +1,7 @@
-
-
-
+> Για την υλοποιημένη C++ διαδρομή ros2_control → SocketCAN → Waveshare
+> USB-CAN-A → VESC, τις επιβεβαιωμένες μετατροπές και τις τρέχουσες εντολές,
+> δες [real-vesc-control.md](real-vesc-control.md). Το παρόν αρχείο περιέχει
+> και παλαιότερες γενικές σημειώσεις σχεδιασμού.
 
 
 ![alt text](../assets/vesc.png)
@@ -463,14 +464,16 @@ FET/motor temperature.
 Input voltage.
 Tachometer.
 
-Το CAN_PACKET_STATUS_5 περιέχει cumulative tachometer σε electrical revolutions. Δεν είναι απαραίτητα τα ακατέργαστα ABI encoder ticks. VESC status-message format https://github.com/vedderb/bldc/blob/master/documentation/comm_can.md?utm_source=chatgpt.com
+Το CAN_PACKET_STATUS_5 περιέχει signed cumulative tachometer με κλίμακα
+6 counts ανά electrical revolution. Δεν είναι raw Hall pulses ούτε ABI ticks.
+Το firmware στέλνει επίσης input voltage ×10 και δύο reserved bytes.
 
 Για μετατροπή σε wheel revolutions χρειάζονται pole pairs και gear ratio:
 
-$$ N_{\text{wheel rev}} = \frac{N_{\text{electrical rev}}} {pG} $$
+Wheel revolutions = delta tachometer / (6 × pole pairs × gear ratio).
 
-Πρέπει να ελεγχθεί πειραματικά: σημείωσε την αρχική τιμή, κάνε τον τροχό ακριβώς μία περιστροφή και δες πόσο άλλαξε το tachometer.
-
+Η πρώτη τιμή ορίζει μόνο τη σχετική αρχή. Η κατεύθυνση και η μηχανική
+εγκατάσταση πρέπει ακόμη να επαληθευθούν με ασφαλή δοκιμή.
 
 
 

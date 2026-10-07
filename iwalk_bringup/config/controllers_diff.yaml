@@ -1,5 +1,3 @@
-# Backwards-compatible production configuration. New launch files select
-# controllers_diff.yaml explicitly.
 controller_manager:
   ros__parameters:
     update_rate: 100

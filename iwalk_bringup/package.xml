@@ -10,6 +10,7 @@
   <exec_depend>robot_state_publisher</exec_depend>
   <exec_depend>controller_manager</exec_depend>
   <exec_depend>diff_drive_controller</exec_depend>
+  <exec_depend>forward_command_controller</exec_depend>
   <exec_depend>joint_state_broadcaster</exec_depend>
   <exec_depend>iwalk_description</exec_depend>
   <exec_depend>iwalk_hardware</exec_depend>

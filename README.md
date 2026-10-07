@@ -1,5 +1,11 @@
 # VIRTUAL MOTOR-ENCODER DEVELOPMENT USING CANBUS AND VESC
 
+> Η τρέχουσα υλοποίηση πραγματικών VESC, η C++ Waveshare bridge και οι
+> εντολές ενός/δύο motors τεκμηριώνονται στο
+> [docs/VESC/real-vesc-control.md](docs/VESC/real-vesc-control.md).
+> Οι παλαιότερες ενότητες fake motor/encoder παρακάτω διατηρούνται ως ιστορικό
+> development tutorial και δεν ορίζουν τις παραμέτρους του hardware plugin.
+
 We isolate the development of iwalk-motor controllers. To do that we use the flow presented bellow.
 
 We want the real system to work like this:
