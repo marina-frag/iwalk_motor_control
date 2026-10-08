@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.10)
 project(iwalk_hardware)
 
 find_package(ament_cmake REQUIRED)
@@ -22,12 +22,13 @@ target_include_directories(${PROJECT_NAME} PUBLIC
   $<INSTALL_INTERFACE:include>
 )
 target_link_libraries(${PROJECT_NAME} iwalk_vesc_protocol)
-ament_target_dependencies(${PROJECT_NAME}
-  hardware_interface
-  pluginlib
-  rclcpp
-  rclcpp_lifecycle
+target_link_libraries(${PROJECT_NAME}
+  hardware_interface::hardware_interface
+  pluginlib::pluginlib
+  rclcpp::rclcpp
+  rclcpp_lifecycle::rclcpp_lifecycle
 )
+
 
 add_executable(vesc_waveshare_bridge src/waveshare_bridge.cpp)
 target_compile_features(vesc_waveshare_bridge PUBLIC cxx_std_17)
@@ -55,11 +56,12 @@ if(BUILD_TESTING)
 
   ament_add_gtest(test_vesc_system test/test_vesc_system.cpp)
   target_link_libraries(test_vesc_system ${PROJECT_NAME} iwalk_vesc_protocol)
-  ament_target_dependencies(test_vesc_system
-    hardware_interface
-    rclcpp
-    rclcpp_lifecycle
+    target_link_libraries(test_vesc_system
+    hardware_interface::hardware_interface
+    rclcpp::rclcpp
+    rclcpp_lifecycle::rclcpp_lifecycle
   )
+
 endif()
 
 ament_export_include_directories(include)

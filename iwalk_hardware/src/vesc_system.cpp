@@ -22,6 +22,8 @@
 #include <linux/can/raw.h>
 #include <net/if.h>
 #include <sys/socket.h>
+#include <sys/uio.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
@@ -111,6 +113,32 @@ CanMessage from_linux_can_frame(const can_frame & frame)
   message.dlc = std::min<uint8_t>(frame.can_dlc, 8U);
   std::copy_n(frame.data, message.dlc, message.data.begin());
   return message;
+}
+
+// Maps the kernel receive timestamp (CLOCK_REALTIME) onto steady_clock, so a frame that
+// waited in the socket queue is aged from its arrival rather than from when read() ran.
+// A wall-clock jump can only make a frame look older (fail-safe) or as fresh as now.
+std::chrono::steady_clock::time_point arrival_time(msghdr & header)
+{
+  const auto steady_now = std::chrono::steady_clock::now();
+  for (cmsghdr * control = CMSG_FIRSTHDR(&header); control != nullptr;
+    control = CMSG_NXTHDR(&header, control))
+  {
+    if (control->cmsg_level != SOL_SOCKET || control->cmsg_type != SCM_TIMESTAMPNS) {
+      continue;
+    }
+    timespec stamp{};
+    std::memcpy(&stamp, CMSG_DATA(control), sizeof(stamp));
+    const auto arrival = std::chrono::system_clock::time_point(
+      std::chrono::duration_cast<std::chrono::system_clock::duration>(
+        std::chrono::seconds(stamp.tv_sec) + std::chrono::nanoseconds(stamp.tv_nsec)));
+    const auto age = std::chrono::system_clock::now() - arrival;
+    if (age > std::chrono::system_clock::duration::zero()) {
+      return steady_now - std::chrono::duration_cast<std::chrono::steady_clock::duration>(age);
+    }
+    return steady_now;
+  }
+  return steady_now;
 }
 
 }  // namespace
@@ -282,6 +310,16 @@ bool VescSystem::open_socket()
     return false;
   }
 
+  const int receive_timestamps = 1;
+  if (::setsockopt(
+      socket_, SOL_SOCKET, SO_TIMESTAMPNS,
+      &receive_timestamps, sizeof(receive_timestamps)) < 0)
+  {
+    RCLCPP_ERROR(kLogger, "Cannot enable receive timestamps: %s", std::strerror(errno));
+    close_socket();
+    return false;
+  }
+
   std::vector<can_filter> filters;
   filters.reserve(wheels_.size() * 2U + (bridge_heartbeat_required_ ? 1U : 0U));
   for (const auto & wheel : wheels_) {
@@ -384,7 +422,14 @@ bool VescSystem::receive_feedback()
   }
   for (int count = 0; count < 256; ++count) {
     can_frame frame{};
-    const ssize_t size = ::read(socket_, &frame, sizeof(frame));
+    iovec payload{&frame, sizeof(frame)};
+    alignas(cmsghdr) char control[CMSG_SPACE(sizeof(timespec))]{};
+    msghdr header{};
+    header.msg_iov = &payload;
+    header.msg_iovlen = 1;
+    header.msg_control = control;
+    header.msg_controllen = sizeof(control);
+    const ssize_t size = ::recvmsg(socket_, &header, 0);
     if (size < 0) {
       if (errno == EAGAIN || errno == EWOULDBLOCK) {
         return !feedback_fault_latched_;
@@ -405,7 +450,7 @@ bool VescSystem::receive_feedback()
     }
 
     const CanMessage message = from_linux_can_frame(frame);
-    const auto now = Clock::now();
+    const auto now = arrival_time(header);
     if (is_bridge_heartbeat(message)) {
       bridge_heartbeat_seen_ = true;
       bridge_heartbeat_time_ = now;
