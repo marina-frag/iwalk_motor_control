@@ -20,7 +20,7 @@ setup(
     zip_safe=True,
     maintainer='marina-fragkouli',
     maintainer_email='marina.frag3@gmail.com',
-    description='TODO: Package description',
+    description='Launch files and controller configuration for I-WALK VESC hardware.',
     license='TODO: License declaration',
     extras_require={
         'test': [

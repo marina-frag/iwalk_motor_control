@@ -6,3 +6,6 @@ __pycache__/
 
 # Exclude STL meshes
 *.[sS][tT][lL]
+
+# VS Code
+.vscode/
